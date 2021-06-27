@@ -10,7 +10,7 @@
 
 int RELAY_PIN;
 
-int relay_pins[4] = {3, 2, 4, 5}; //Translate Relay ID to Arduino Pin
+int relay_pins[4] = {2, 3, 4, 5}; //Translate Relay ID to Arduino Pin
 
 RF24 radio(7, 8); //(CE - Pin 7, CSN - Pin 8)
 
@@ -28,6 +28,8 @@ data payload;
 
 void setup()
 {
+
+    
     //For serial debugging
     Serial.begin(115200);
 
@@ -111,5 +113,5 @@ void loop()
         }
     }
 
-    delay(200);
+    delay(100);
 }
