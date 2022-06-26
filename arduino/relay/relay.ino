@@ -1,5 +1,10 @@
+#include <nRF24L01.h>
+#include <printf.h>
+#include <RF24_config.h>
+#include <RF24.h>
+
 /*
-  * Wireless Relay Reciever
+  * Wireless nRF24L01 Relay Receiver
   * 
   * Author: Creed Zagrzebski (czagrzebski)
   */
@@ -7,48 +12,44 @@
 #include <SPI.h>
 #include <nRF24L01.h>
 #include <RF24.h>
+#include <EEPROM.h>
 
-int RELAY_PIN;
-
-int relay_pins[4] = {2, 3, 4, 5}; //Translate Relay ID to Arduino Pin
+// Map Arduino Pins to Relays
+int relay_pins[4] = {2, 3, 4, 5}; 
 
 RF24 radio(7, 8); //(CE - Pin 7, CSN - Pin 8)
 
-uint8_t address[][6] = {"1Node", "2Node"};
+uint8_t address[][6] = {"1Node"};
 
 bool radioNumber = 1; // 0 uses address[0] to transmit, 1 uses address[1] to transmit
 
-typedef struct data
+struct data
 {
     uint32_t relay_id; //ID that represents each relay (e.g: 1,2,3,4)
     uint32_t state; //0 for off, 1 for on
 };
 
-data payload;
+typedef struct data Data;
+
+Data payload;
 
 void setup()
-{
-
-    
+{ 
     //For serial debugging
-    Serial.begin(115200);
+    Serial.begin(11520);
 
     radio.begin();
 
-    // print example's introductory prompt
     Serial.println("Wirelss Relay Receiver");
-
-    char input = '1';
-    radioNumber = input == 1;
 
     //Prevents Power Supply Related Issue (and isn't necessary for testing when they are close together)
     radio.setPALevel(RF24_PA_LOW);
 
-    //Defining Payload Size saves time
-    radio.setPayloadSize(8); // Data from RPi is 8 bytes
+    //Defining Payload Size saves processing time
+    radio.setPayloadSize(8); // Data from RPi is 8 bytes ( 4-byte ints)
 
     // set the RX address of the TX node into a RX pipe
-    radio.openReadingPipe(1, address[!radioNumber]); // using pipe 1
+    radio.openReadingPipe(1, address[0]); // using pipe 1
 
     radio.startListening(); // put radio in RX mode
 
@@ -62,7 +63,6 @@ void setup()
 
 void loop()
 {
-
     uint8_t pipe;
 
     if (radio.available(&pipe))
@@ -100,7 +100,7 @@ void loop()
         else
         {
             //Translate Relay Number to Relay PIN on Arduino
-            RELAY_PIN = relay_pins[payload.relay_id - 1];
+            int RELAY_PIN = relay_pins[payload.relay_id - 1];
 
             if (payload.state == 1)
             {
@@ -114,4 +114,28 @@ void loop()
     }
 
     delay(100);
+}
+
+void toggleOff(int relay_id){
+    //Translate Relay Number to Relay PIN on Arduino
+    int RELAY_PIN = relay_pins[payload.relay_id - 1];
+    digitalWrite(RELAY_PIN, LOW);
+    saveRelayState(relay_id, 0);
+}
+  
+void toggleOn(int relay_id){
+    //Translate Relay Number to Relay PIN on Arduino
+    int RELAY_PIN = relay_pins[payload.relay_id - 1];
+    digitalWrite(RELAY_PIN, HIGH);
+    saveRelayState(relay_id, 1);
+}
+
+/**
+ * Saves the relay state to EEPROM
+ * 
+ * @param relay_id The ID of the relay
+ * @param state  The state of the relay
+ */
+void saveRelayState(int relay_id, int state){
+    EEPROM.update(relay_id - 1, state);
 }

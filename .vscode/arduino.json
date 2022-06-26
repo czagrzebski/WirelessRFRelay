@@ -1,7 +1,7 @@
 {
-    "port": "COM3",
+    "port": "/dev/ttyS3",
     "board": "arduino:avr:nano",
-    "sketch": "arduino\\relay\\relay.ino",
+    "sketch": "arduino/relay/relay.ino",
     "programmer": "arduino:avrisp",
     "configuration": "cpu=atmega328"
 }
