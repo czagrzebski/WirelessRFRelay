@@ -8,6 +8,7 @@
 #include <nRF24L01.h>
 #include <RF24.h>
 #include <EEPROM.h>
+#include "config.h"
 
 // Map Arduino Pins to Relays
 int relay_pins[4] = {5, 4, 3, 2}; 
@@ -35,14 +36,14 @@ void setup()
 
     Serial.println("Wireless Relay Receiver v1.0.0");
 
-    //Prevents Power Supply Related Issue (and isn't necessary for testing when they are close together)
+    // Mitigates Power Supply Related Issue during development
     radio.setPALevel(RF24_PA_LOW);
 
     //Defining Payload Size saves processing time
     radio.setPayloadSize(8); // Data from RPi is 8 bytes ( 4-byte ints)
 
     // set the RX address of the TX node into a RX pipe
-    radio.openReadingPipe(0, address[0]); // using pipe 1
+    radio.openReadingPipe(0, address[0]); 
 
     // put radio in RX mode
     radio.startListening(); 
@@ -51,12 +52,7 @@ void setup()
     for (int i = 0; i < sizeof(relay_pins); i++)
     {
         pinMode(relay_pins[i], OUTPUT);
-        if(EEPROM.read(i) == 1){
-            digitalWrite(relay_pins[i], HIGH);
-        } else {
-            digitalWrite(relay_pins[i], LOW);
-        }
-      
+        digitalWrite(relay_pins[i], EEPROM.read(i) == 1);
     }
 }
 
@@ -79,19 +75,18 @@ void loop()
         {
             if (payload.state == 1)
             {
-                //Turn all the relays off
-                for (int i = 0; i < sizeof(relay_pins); i++)
+                //Turn all the relays on
+                for (int i = 1; i <= sizeof(relay_pins); i++)
                 {
-                    pinMode(relay_pins[i], OUTPUT);
-                    digitalWrite(relay_pins[i], HIGH);
+                    toggleOn(i);
                 }
             }
             else
             {
-                for (int i = 0; i < sizeof(relay_pins); i++)
+                //Turn all the relays off
+                for (int i = 1; i <= sizeof(relay_pins); i++)
                 {
-                    pinMode(relay_pins[i], OUTPUT);
-                    digitalWrite(relay_pins[i], LOW);
+                    toggleOff(i);
                 }
             }
         }
@@ -141,6 +136,8 @@ void toggleOn(int relay_id){
  * @param state  The state of the relay
  */
 void saveRelayState(int relay_id, int state){
+    // Do not save if disabled
+    if(!POWER_SAVE) { return; }
     Serial.println(relay_id);
     Serial.println(state);
     EEPROM.update(relay_id - 1, state);
